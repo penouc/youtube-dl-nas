@@ -1,6 +1,6 @@
 #!/bin/bash
 
-subber /usr/src/app/Auth.json
+./subber ./Auth.json
 
-python -u /usr/src/app/upd_schedule.py &
-python -u /usr/src/app/youtube-dl-server.py 
+python -u ./upd_schedule.py &
+python -u ./youtube-dl-server.py 
