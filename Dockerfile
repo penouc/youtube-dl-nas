@@ -1,8 +1,8 @@
 # youtube-dl-nas Server Dockerfile
-# https://github.com/hyeonsangjeon/youtube-dl-nas.git
+# https://github.com/penouc/youtube-dl-nas.git
 
 FROM python:3-onbuild
-LABEL maintainer="wingnut0310 <wingnut0310@gmail.com>"
+LABEL maintainer="penouc <penouc@gmail.com>"
 
 # Install ffmpeg.
 #https://unix.stackexchange.com/questions/508724/failed-to-fetch-jessie-backports-repository
