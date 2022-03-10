@@ -80,8 +80,13 @@ def q_put():
     url = request.json.get("url")
     resolution = request.json.get("resolution")
 
+    jsonbox = request.json;
+    jsonbox["url"] = url
+    jsonbox["ws"] = WSAddr.wsClassVal
+    jsonbox["type"] = "web"
+
     if "" != url:
-        box = (url, WSAddr.wsClassVal, resolution, "web")
+        box = jsonbox
         dl_q.put(box)
 
         if (Thr.dl_thread.is_alive() == False):
@@ -115,7 +120,8 @@ def q_put_rest():
 def dl_worker():
     while not done:
         item = dl_q.get()
-        if(item[3]=="web"):
+        print("[DL_WORKER]", item)
+        if(item.get("type") =="web"):
             download(item)
         else:
             download_rest(item)
@@ -125,16 +131,25 @@ def dl_worker():
 def build_youtube_dl_cmd(url):
     with open('Auth.json') as data_file:
         data = json.load(data_file)  # Auth info, when docker run making file
-        if (url[2] == "best"):
-            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]", "--exec", "touch {} && mv {} ./downfolder/", "--merge-output-format", "mp4", url[0]]
-        # url[2] == "audio" for download_rest()
-        elif (url[2] == "audio-m4a" or url[2] == "audio"):
-            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestaudio[ext=m4a]", "--exec", "touch {} && mv {} ./downfolder/", url[0]]
-        elif (url[2] == "audio-mp3"):
-            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestaudio[ext=m4a]", "-x", "--audio-format", "mp3", "--exec", "touch {} && mv {} ./downfolder/", url[0]]
+        oriresolution = url.get("resolution")
+        oriUrl = url.get("url")
+
+        extraParams = [];
+        for key in url:
+            if key != "url" and key != "resolution" and key != "type" and key != "ws":
+                extraParams = extraParams + [key, url.get(key)]
+
+        if (oriresolution == "best"):
+            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]", "--exec", "touch {} && mv {} ./downfolder/", "--merge-output-format", "mp4"] + extraParams  + [oriUrl]
+        # oriresolution == "audio" for download_rest()
+        elif (oriresolution == "audio-m4a" or oriresolution == "audio"):
+            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestaudio[ext=m4a]", "--exec", "touch {} && mv {} ./downfolder/"] + extraParams  + [oriUrl]
+        elif (oriresolution == "audio-mp3"):
+            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestaudio[ext=m4a]", "-x", "--audio-format", "mp3", "--exec", "touch {} && mv {} ./downfolder/"] + extraParams  + [oriUrl]
         else:
-            resolution = url[2][:-1]
-            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestvideo[height<="+resolution+"][ext=mp4]+bestaudio[ext=m4a]", "--exec", "touch {} && mv {} ./downfolder/",  url[0]]
+            resolution = oriresolution[:-1]
+            cmd = ["youtube-dl", "--proxy", data['PROXY'], "-o", "./downfolder/.incomplete/%(title)s.%(ext)s", "-f", "bestvideo[height<="+resolution+"][ext=mp4]+bestaudio[ext=m4a]", "--exec", "touch {} && mv {} ./downfolder/"] + extraParams  + [oriUrl]
+        
         print (" ".join(cmd))
         return cmd
 
@@ -143,14 +158,16 @@ def download(url):
     # url[1].send("[MSG], [Started] downloading   " + url[0] + "  resolution below " + url[2])
     result=""
     result = subprocess.run(build_youtube_dl_cmd(url))
+    ws = url.get("ws")
+    
     try:
         if(result.returncode==0):
-            url[1].send("[MSG], [Finished] " + url[0] + "  resolution below " + url[2]+", Remain download Count "+ json.dumps(dl_q.qsize()))
-            url[1].send("[QUEUE], Remaining download Count : " + json.dumps(dl_q.qsize()))
-            url[1].send("[COMPLETE]," + url[2] + "," + url[0])
+            ws.send("[MSG], [Finished] " + url[0] + "  resolution below " + url[2]+", Remain download Count "+ json.dumps(dl_q.qsize()))
+            ws.send("[QUEUE], Remaining download Count : " + json.dumps(dl_q.qsize()))
+            ws.send("[COMPLETE]," + url[2] + "," + url[0])
         else:
-            url[1].send("[MSG], [Finished] downloading  failed  " + url[0])
-            url[1].send("[COMPLETE]," + "url access failure" + "," + url[0])
+            ws.send("[MSG], [Finished] downloading  failed  " + url[0])
+            ws.send("[COMPLETE]," + "url access failure" + "," + url[0])
     except error:
         print("Be Thread Safe")
 

@@ -42,6 +42,13 @@ $(function () {
         var data={};
         data.url = $("#url").val();
         data.resolution = $("#selResolution").val();
+        const extra = $("#extra").val();
+
+        var searchParams = new URLSearchParams(extra);
+
+        for (let p of searchParams) {
+            data[p[0]] = p[1];
+        }
 
         $.ajax({
             method : "POST"

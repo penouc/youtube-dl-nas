@@ -49,7 +49,7 @@
                                 </select>
                             </span>
                             <input name="url" id="url" type="url" class="form-control" placeholder="URL" >
-
+                            <textarea name="extra" id="extra" class="form-control" ></textarea>
                             <span class="input-group-btn">
                                 <button href="#" id ="send" class="btn btn-primary" >
                                   <span class="glyphicon glyphicon-share-alt"  aria-hidden="true"></span> Submit
